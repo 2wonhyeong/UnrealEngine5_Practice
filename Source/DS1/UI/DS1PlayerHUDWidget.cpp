@@ -3,6 +3,7 @@
 
 #include "UI/DS1PlayerHUDWidget.h"
 #include "DS1StatBarWidget.h"
+#include "UI/My_HPBarWidget.h"
 #include "Components/DS1AttributeComponent.h"
 
 UDS1PlayerHUDWidget::UDS1PlayerHUDWidget(const FObjectInitializer& ObjectInitializer)
@@ -20,6 +21,7 @@ void UDS1PlayerHUDWidget::NativeConstruct()
 		{
 			Attribute->OnAttributeChanged.AddUObject(this, &UDS1PlayerHUDWidget::OnAttributeChanged);
 			Attribute->BroadcastAttributeChanged(EDS1AttributeType::Stamina);
+			Attribute->BroadcastAttributeChanged(EDS1AttributeType::Health);
 		}
 	}
 }
@@ -32,6 +34,7 @@ void UDS1PlayerHUDWidget::OnAttributeChanged(EDS1AttributeType AttributeType, fl
 		StaminaBarWidget->SetRatio(InValue);
 		break;
 	case EDS1AttributeType::Health:
+		HPBarWidget->SetRatio(InValue);
 		break;
 	}
 }

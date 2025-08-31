@@ -36,10 +36,18 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement Data")
 	bool bIsFalling;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement Data")
+	float Direction;
+
 public:
 	UDS1AnimInstance();
 
 	virtual void NativeInitializeAnimation() override;
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
 	
+public:
+	UFUNCTION()
+	void AnimNotify_ResetMovementInput();
+	UFUNCTION()
+	void AnimNotify_ResetState();
 };

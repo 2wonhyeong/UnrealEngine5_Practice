@@ -8,6 +8,7 @@
 #include "DS1PlayerHUDWidget.generated.h"
 
 class UDS1StatBarWidget;
+class UMy_HPBarWidget;
 /**
  * 
  */
@@ -19,6 +20,8 @@ class DS1_API UDS1PlayerHUDWidget : public UUserWidget
 protected:
 	UPROPERTY(meta = (BindWidget), BlueprintReadWrite)
 	UDS1StatBarWidget* StaminaBarWidget;
+	UPROPERTY(meta = (BindWidget), BlueprintReadWrite)
+	UMy_HPBarWidget* HPBarWidget;
 	
 public:
 	UDS1PlayerHUDWidget(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());

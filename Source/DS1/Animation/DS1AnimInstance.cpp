@@ -4,6 +4,9 @@
 #include "Animation/DS1AnimInstance.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Character/DS1Character.h"
+#include "KismetAnimationLibrary.h"
+#include "Components/DS1StateComponent.h"
 
 UDS1AnimInstance::UDS1AnimInstance()
 {
@@ -41,4 +44,22 @@ void UDS1AnimInstance::NativeUpdateAnimation(float DeltaSeconds)
     bShouldMove = GroundSpeed > 3.f && MovementComponent->GetCurrentAcceleration() != FVector::ZeroVector;
 
     bIsFalling = MovementComponent->IsFalling();
+
+    Direction = UKismetAnimationLibrary::CalculateDirection(Velocity, Character->GetActorRotation());
+}
+
+void UDS1AnimInstance::AnimNotify_ResetMovementInput()
+{
+    if (ADS1Character* LocalCharacter = Cast<ADS1Character>(GetOwningActor()))
+    {
+        LocalCharacter->GetStateComponent()->ToggleMovementInput(true);
+    }
+}
+
+void UDS1AnimInstance::AnimNotify_ResetState()
+{
+    if (const ADS1Character* LocalCharacter = Cast<ADS1Character>(GetOwningActor()))
+    {
+        LocalCharacter->GetStateComponent()->ClearState();
+    }
 }

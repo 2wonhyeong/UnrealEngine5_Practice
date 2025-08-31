@@ -44,6 +44,11 @@ void UDS1StateComponent::ToggleMovementInput(bool bEnabled, float Duration)
 void UDS1StateComponent::MovementInputEnableAction()
 {
 	bMovementInputEnabled = true;
+	ClearState();
+}
+void UDS1StateComponent::ClearState()
+{
+	CurrentState = FGameplayTag::EmptyTag;
 }
 bool UDS1StateComponent::IsCurrentStateEqualToAny(const FGameplayTagContainer& TagsToCheck) const
 {

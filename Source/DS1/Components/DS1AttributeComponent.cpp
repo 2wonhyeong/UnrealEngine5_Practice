@@ -41,7 +41,7 @@ void UDS1AttributeComponent::ToggleStaminaRegeneration(bool bEnabled, float Star
 	{
 		if (GetWorld()->GetTimerManager().IsTimerActive(StaminaRegenTimerHandle) == false)
 		{
-			GetWorld()->GetTimerManager().SetTimer(StaminaRegenTimerHandle, this, &UDS1AttributeComponent::RegenStaminaHandler, 0.1f, true, StartDelay);
+			GetWorld()->GetTimerManager().SetTimer(StaminaRegenTimerHandle, this, &UDS1AttributeComponent::RegenStaminaHandler, 0.05f, true, StartDelay);
 		}
 	}
 	else
@@ -61,10 +61,33 @@ void UDS1AttributeComponent::BroadcastAttributeChanged(EDS1AttributeType InAttri
 			break;
 
 		case EDS1AttributeType::Health:
+			Ratio = GetHealthRatio();
 			break;
 		}
 		OnAttributeChanged.Broadcast(InAttributeType, Ratio);
 	}
+}
+void UDS1AttributeComponent::TakeDamageAmount(float DamageAmount)
+{
+	BaseHealth = FMath::Clamp(BaseHealth - DamageAmount, 0.f, MaxHealth);
+	BroadcastAttributeChanged(EDS1AttributeType::Health);
+
+	if (BaseHealth <= 0.f)
+	{
+		if (OnDeath.IsBound())
+		{
+			OnDeath.Broadcast();
+		}
+		if (UDS1StateComponent* StateComp = GetOwner()->FindComponentByClass<UDS1StateComponent>())
+		{
+			StateComp->SetState(DS1GamePlayTags::Character_State_Death);
+		}
+	}
+}
+void UDS1AttributeComponent::ApplyHealthChange(float Delta)
+{
+	BaseHealth = FMath::Clamp(BaseHealth + Delta, 0.f, MaxHealth);
+	BroadcastAttributeChanged(EDS1AttributeType::Health);
 }
 void UDS1AttributeComponent::RegenStaminaHandler()
 {
