@@ -5,7 +5,9 @@
 
 #include "DS1GamePlayTags.h"
 #include "Components/DS1CombatComponent.h"
+#include "Character/DS1Character.h"
 #include "Components/DS1WeaponCollisionComponent.h"
+#include "Animation/DS1AnimInstance.h"
 #include "Data/DS1MontageActionData.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -13,6 +15,9 @@ ADS1Weapon::ADS1Weapon()
 {
 	WeaponCollision = CreateDefaultSubobject<UDS1WeaponCollisionComponent>("WeaponCollision");
 	WeaponCollision->OnHitActor.AddUObject(this, &ADS1Weapon::OnHitActor);
+
+	SecondWeaponCollision = CreateDefaultSubobject<UDS1WeaponCollisionComponent>("SecondCollision");
+	SecondWeaponCollision->OnHitActor.AddUObject(this, &ADS1Weapon::OnHitActor);
 
 	StaminaCostMap.Add(DS1GamePlayTags::Character_Attack_Light, 0.f);
 	StaminaCostMap.Add(DS1GamePlayTags::Character_Attack_Running, 5.f);
@@ -37,6 +42,14 @@ void ADS1Weapon::EquipItem()
 		AttachToOwner(AttachSocket);
 
 		WeaponCollision->SetWeaponMesh(Mesh);
+
+		if (ADS1Character* OwnerCharacter = Cast<ADS1Character>(GetOwner()))
+		{
+			if (UDS1AnimInstance* Anim = Cast<UDS1AnimInstance>(OwnerCharacter->GetMesh()->GetAnimInstance()))
+			{
+				Anim->UpdateCombatMode(CombatType);
+			}
+		}
 
 		WeaponCollision->AddIgnoredActor(GetOwner());
 	}
@@ -87,4 +100,29 @@ void ADS1Weapon::OnHitActor(const FHitResult& Hit)
 		GetOwner()->GetInstigatorController(),
 		this,
 		nullptr);
+}
+void ADS1Weapon::ActivateCollision(EWeaponCollisionType InCollisionType)
+{
+	switch (InCollisionType)
+	{
+	case EWeaponCollisionType::MainCollision:
+		WeaponCollision->TurnOnCollision();
+		break;
+	case EWeaponCollisionType::SecondCollision:
+		SecondWeaponCollision->TurnOnCollision();
+		break;
+	}
+}
+
+void ADS1Weapon::DeactivateCollision(EWeaponCollisionType InCollisionType)
+{
+	switch (InCollisionType)
+	{
+	case EWeaponCollisionType::MainCollision:
+		WeaponCollision->TurnOffCollision();
+		break;
+	case EWeaponCollisionType::SecondCollision:
+		SecondWeaponCollision->TurnOffCollision();
+		break;
+	}
 }

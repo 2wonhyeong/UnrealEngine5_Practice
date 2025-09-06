@@ -7,7 +7,7 @@
 #include "Equipments/DS1Weapon.h"
 #include "DS1CombatComponent.generated.h"
 
-
+DECLARE_MULTICAST_DELEGATE_OneParam(FDelegateOnChangedCombat, bool);
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class DS1_API UDS1CombatComponent : public UActorComponent
 {
@@ -21,6 +21,10 @@ class DS1_API UDS1CombatComponent : public UActorComponent
 	//마지막 공격의 타입
 	UPROPERTY(VisibleAnywhere)
 	FGameplayTag LastAttackType;
+
+public:
+	//Combat상태 전환을 알리는 델리게이트
+	FDelegateOnChangedCombat OnChangedCombat;
 
 public:	
 	UDS1CombatComponent();
@@ -36,7 +40,8 @@ public:
 
 public:
 	FORCEINLINE bool IsCombatEnabled() const { return bCombatEnabled; };
-	FORCEINLINE void SetCombatEnabled(const bool bEnabled) { bCombatEnabled = bEnabled; };
+	void SetCombatEnabled(const bool bEnabled);
+	//FORCEINLINE void SetCombatEnabled(const bool bEnabled) { bCombatEnabled = bEnabled; };
 
 	FORCEINLINE ADS1Weapon* GetMainWeapon() const { return MainWeapon; };
 
