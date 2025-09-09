@@ -14,6 +14,7 @@
 #include "Components/DS1TargetingComponent.h"
 #include "DS1GamePlayTags.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Equipments/DS1FistWeapon.h"
 #include "Components/DS1CombatComponent.h"
 #include "Interfaces/DS1Interact.h"
 #include "Engine/DamageEvents.h"
@@ -64,6 +65,13 @@ void ADS1Character::BeginPlay()
 		{
 			PlayerHUDWidget->AddToViewport();
 		}
+	}
+	if (FistWeaponClass)
+	{
+		FActorSpawnParameters Spawnparams;
+		Spawnparams.Owner = this;
+		ADS1FistWeapon* FistWeapon = GetWorld()->SpawnActor<ADS1FistWeapon>(FistWeaponClass, GetActorTransform(), Spawnparams);
+		FistWeapon->EquipItem();
 	}
 }
 
@@ -273,7 +281,12 @@ void ADS1Character::Interact()
 }
 bool ADS1Character::CanToggleCombat() const
 {
-	check(StateComponent)
+	check(StateComponent);
+
+	if (IsValid(CombatComponent->GetMainWeapon()) == false)
+		return false;
+	if (CombatComponent->GetMainWeapon()->GetCombatType() == ECombatType::MeleeFists)
+		return false;
 
 	FGameplayTagContainer CheckTags;
 	CheckTags.AddTag(DS1GamePlayTags::Character_State_Attacking);
@@ -284,8 +297,8 @@ bool ADS1Character::CanToggleCombat() const
 }
 void ADS1Character::ToggleCombat()
 {
-	check(CombatComponent)
-	check(StateComponent)
+	check(CombatComponent);
+	check(StateComponent);
 
 	if(CombatComponent)
 	{
@@ -522,4 +535,14 @@ void ADS1Character::LeftTarget()
 void ADS1Character::RightTarget()
 {
 	TargetingComponent->SwitchingLockedOnActor(ESwitchingDirection::Right);
+}
+void ADS1Character::ActivateWeaponCollision(EWeaponCollisionType WeaponCollisionType)
+{
+	if (CombatComponent)
+		CombatComponent->GetMainWeapon()->ActivateCollision(WeaponCollisionType);
+}
+void ADS1Character::DeactivateWeaponCollision(EWeaponCollisionType WeaponCollisionType)
+{
+	if (CombatComponent)
+		CombatComponent->GetMainWeapon()->DeactivateCollision(WeaponCollisionType);
 }

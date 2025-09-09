@@ -2,8 +2,9 @@
 
 #pragma once
 
-#include "Character/DS1Character.h"
 #include "CoreMinimal.h"
+#include "Character/DS1Character.h"
+#include "DS1Define.h"
 #include "Equipments/DS1Equipment.h"
 #include "DS1Weapon.generated.h"
 
@@ -26,10 +27,14 @@ protected:
 	FName UnequipSocketName;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment | Socket")
 	UDS1MontageActionData* MontageActionData;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment")
+	ECombatType CombatType = ECombatType::SwordShield;
 
 protected:
 	UPROPERTY(VisibleAnywhere)
 	UDS1WeaponCollisionComponent* WeaponCollision;
+	UPROPERTY(VisibleAnywhere)
+	UDS1WeaponCollisionComponent* SecondWeaponCollision;
 
 protected:
 	UPROPERTY()
@@ -55,6 +60,11 @@ public:
 	FORCEINLINE FName GetEquipSocketName() const { return EquipSocketName; };
 	FORCEINLINE FName GetUnequipSocketName() const { return UnequipSocketName; };
 	FORCEINLINE UDS1WeaponCollisionComponent* GetCollision() const { return WeaponCollision; };
+	FORCEINLINE ECombatType GetCombatType() const { return CombatType; };
+
+public:
+	virtual void ActivateCollision(EWeaponCollisionType InCollisionType);
+	virtual void DeactivateCollision(EWeaponCollisionType InCollisionType);
 
 public:
 	void OnHitActor(const FHitResult& Hit);

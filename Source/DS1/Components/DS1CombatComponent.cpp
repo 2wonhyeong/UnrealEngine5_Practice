@@ -51,3 +51,12 @@ void UDS1CombatComponent::SetWeapon(ADS1Weapon* NewWeapon)
 	MainWeapon = NewWeapon;
 }
 
+void UDS1CombatComponent::SetCombatEnabled(const bool bEnabled)
+{
+	bCombatEnabled = bEnabled;
+	if (OnChangedCombat.IsBound())
+	{
+		OnChangedCombat.Broadcast(bCombatEnabled);
+	}
+}
+

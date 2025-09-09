@@ -3,9 +3,7 @@
 
 #include "Animation/NotifyState_DS1WeaponCollision.h"
 
-#include "Components/DS1CombatComponent.h"
-#include "Components/DS1WeaponCollisionComponent.h"
-#include "Equipments/DS1Weapon.h"
+#include "Interfaces/DS1CombatInterface.h"
 
 UNotifyState_DS1WeaponCollision::UNotifyState_DS1WeaponCollision(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
@@ -16,15 +14,11 @@ void UNotifyState_DS1WeaponCollision::NotifyBegin(USkeletalMeshComponent* MeshCo
 {
 	Super::NotifyBegin(MeshComp, Animation, TotalDuration, EventReference);
 
-	if (const AActor* OwnerActor = MeshComp->GetOwner())
+	if (AActor* OwnerActor = MeshComp->GetOwner())
 	{
-		if (const UDS1CombatComponent* CombatComponent = OwnerActor->GetComponentByClass<UDS1CombatComponent>())
+		if (IDS1CombatInterface* CombatInterface = Cast<IDS1CombatInterface>(OwnerActor))
 		{
-			const ADS1Weapon* Weapon = CombatComponent->GetMainWeapon();
-			if (::IsValid(Weapon))
-			{
-				Weapon->GetCollision()->TurnOnCollision();
-			}
+			CombatInterface->ActivateWeaponCollision(CollisionType);
 		}
 	}
 }
@@ -33,15 +27,11 @@ void UNotifyState_DS1WeaponCollision::NotifyEnd(USkeletalMeshComponent* MeshComp
 {
 	Super::NotifyEnd(MeshComp, Animation, EventReference);
 
-	if (const AActor* OwnerActor = MeshComp->GetOwner())
+	if (AActor* OwnerActor = MeshComp->GetOwner())
 	{
-		if (const UDS1CombatComponent* CombatComponent = OwnerActor->GetComponentByClass<UDS1CombatComponent>())
+		if (IDS1CombatInterface* CombatInterface = Cast<IDS1CombatInterface>(OwnerActor))
 		{
-			const ADS1Weapon* Weapon = CombatComponent->GetMainWeapon();
-			if (::IsValid(Weapon))
-			{
-				Weapon->GetCollision()->TurnOffCollision();
-			}
+			CombatInterface->DeactivateWeaponCollision(CollisionType);
 		}
 	}
 }
