@@ -1,2 +1,19 @@
 *.uasset filter=lfs diff=lfs merge=lfs -text
 *.umap filter=lfs diff=lfs merge=lfs -text
+# Unreal Engine 파일들을 항상 바이너리로 취급
+*.uasset binary
+*.umap binary
+*.upk binary
+*.udk binary
+*.ubulk binary
+*.umodel binary
+*.uproject binary
+*.uplugin binary
+
+# 엔진 소스 (필요시)
+*.exe binary
+*.dll binary
+*.lib binary
+*.app binary
+*.dylib binary
+*.so binary
