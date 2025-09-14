@@ -85,6 +85,8 @@ protected:
 	TSubclassOf<UUserWidget> PlayerHUDWidgetClass;
 	UPROPERTY()
 	ULTPlayerHUDWidget* PlayerHUDWidget;
+	UPROPERTY(EditAnywhere, Category = "UI")
+	TSubclassOf<UUserWidget> DeathWidgetClass;
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -190,4 +192,5 @@ public:
 public:
 	virtual void ActivateWeaponCollision(EWeaponCollisionType WeaponCollisionType) override;
 	virtual void DeactivateWeaponCollision(EWeaponCollisionType WeaponCollisionType) override;
+	virtual void OnDeath();
 };

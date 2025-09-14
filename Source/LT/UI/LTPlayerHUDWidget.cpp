@@ -9,7 +9,6 @@
 ULTPlayerHUDWidget::ULTPlayerHUDWidget(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
 {
-
 }
 void ULTPlayerHUDWidget::NativeConstruct()
 {
@@ -19,10 +18,18 @@ void ULTPlayerHUDWidget::NativeConstruct()
 	{
 		if (ULTAttributeComponent* Attribute = OwningPawn->GetComponentByClass<ULTAttributeComponent>())
 		{
-			Attribute->OnAttributeChanged.AddUObject(this, &ULTPlayerHUDWidget::OnAttributeChanged);
-			Attribute->BroadcastAttributeChanged(ELTAttributeType::Stamina);
-			Attribute->BroadcastAttributeChanged(ELTAttributeType::Health);
+			BindPlayerStats(Attribute);
 		}
+	}
+}
+
+void ULTPlayerHUDWidget::BindPlayerStats(ULTAttributeComponent* AttributeComp)
+{
+	if (AttributeComp)
+	{
+		AttributeComp->OnAttributeChanged.AddUObject(this, &ULTPlayerHUDWidget::OnAttributeChanged);
+		AttributeComp->BroadcastAttributeChanged(ELTAttributeType::Stamina);
+		AttributeComp->BroadcastAttributeChanged(ELTAttributeType::Health);
 	}
 }
 

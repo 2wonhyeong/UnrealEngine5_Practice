@@ -3,7 +3,7 @@
 
 #include "Data/LTMontageActionData.h"
 
-UAnimMontage* ULTMontageActionData::GetMontageForTag(const FGameplayTag& GroupTag, const int32 Index)
+UAnimMontage* ULTMontageActionData::GetMontageForTag(const FGameplayTag& GroupTag, const int32 Index) const
 {
 	if (MontageGroupMap.Contains(GroupTag))
 	{
@@ -15,5 +15,18 @@ UAnimMontage* ULTMontageActionData::GetMontageForTag(const FGameplayTag& GroupTa
 		}
 	}
 
+	return nullptr;
+}
+
+UAnimMontage* ULTMontageActionData::GetRandomMontageForTag(const FGameplayTag& GroupTag) const
+{
+	if (MontageGroupMap.Contains(GroupTag))
+	{
+		const FLTMontageGroup& MontageGroup = MontageGroupMap[GroupTag];
+
+		const int32 RandomIndex = FMath::RandRange(0, MontageGroup.Animations.Num() - 1);
+
+		return GetMontageForTag(GroupTag, RandomIndex);
+	}
 	return nullptr;
 }

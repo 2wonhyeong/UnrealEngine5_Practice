@@ -18,6 +18,9 @@
 #include "Components/LTCombatComponent.h"
 #include "Interfaces/LTInteract.h"
 #include "Engine/DamageEvents.h"
+#include "Components/CapsuleComponent.h"
+#include "GameMods/LTGameModeBase.h"
+#include "Player/LTPlayerController.h"
 
 // Sets default values
 ALTCharacter::ALTCharacter()
@@ -52,6 +55,8 @@ ALTCharacter::ALTCharacter()
 	CombatComponent = CreateDefaultSubobject<ULTCombatComponent>(TEXT("Combat"));
 
 	TargetingComponent = CreateDefaultSubobject<ULTTargetingComponent>(TEXT("Targeting"));
+
+	AttributeComponent->OnDeath.AddUObject(this, &ThisClass::OnDeath);
 }
 
 // Called when the game starts or when spawned
@@ -191,6 +196,8 @@ void ALTCharacter::Rolling()
 
 	if (AttributeComponent->CheckHasEnoughStamina(10.f)&&CanPerformRoll())
 	{
+		ResetCombo();
+
 		AttributeComponent->ToggleStaminaRegeneration(false);
 
 		StateComponent->ToggleMovementInput(false);
@@ -363,6 +370,10 @@ void ALTCharacter::ApplyDamage()
 }
 FGameplayTag ALTCharacter::GetAttackPerform() const
 {
+	if (GetCharacterMovement()->IsFalling())
+	{
+		return LTGamePlayTags::Character_State_Jumping;
+	}
 	if (IsSprinting())
 	{
 		return LTGamePlayTags::Character_Attack_Running;
@@ -545,4 +556,37 @@ void ALTCharacter::DeactivateWeaponCollision(EWeaponCollisionType WeaponCollisio
 {
 	if (CombatComponent)
 		CombatComponent->GetMainWeapon()->DeactivateCollision(WeaponCollisionType);
+}
+void ALTCharacter::OnDeath()
+{
+	if (IsValid(PlayerHUDWidget))
+	{
+		PlayerHUDWidget->RemoveFromParent();
+		PlayerHUDWidget = nullptr;
+	}
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	if (PlayerController)
+	{
+		DisableInput(PlayerController);
+	}
+	if (UCapsuleComponent* CapsuleComp = GetCapsuleComponent())
+	{
+		CapsuleComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
+	if (USkeletalMeshComponent* MeshComp = GetMesh())
+	{
+		MeshComp->SetCollisionProfileName("Ragdoll");
+		MeshComp->SetSimulatePhysics(true);
+	}
+	if (ALTGameModeBase* GM = GetWorld()->GetAuthGameMode<ALTGameModeBase>())
+	{
+		GM->PlayerDied(PlayerController);
+	}
+	if (DeathWidgetClass)
+	{
+		if (ALTPlayerController* LTController = Cast<ALTPlayerController>(GetController()))
+		{
+			LTController->ShowDeathWidget(DeathWidgetClass);
+		}
+	}
 }

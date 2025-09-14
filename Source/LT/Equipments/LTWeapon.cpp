@@ -43,7 +43,7 @@ void ALTWeapon::EquipItem()
 
 		WeaponCollision->SetWeaponMesh(Mesh);
 
-		if (ALTCharacter* OwnerCharacter = Cast<ALTCharacter>(GetOwner()))
+		if (ACharacter* OwnerCharacter = Cast<ACharacter>(GetOwner()))
 		{
 			if (ULTAnimInstance* Anim = Cast<ULTAnimInstance>(OwnerCharacter->GetMesh()->GetAnimInstance()))
 			{
@@ -58,7 +58,10 @@ UAnimMontage* ALTWeapon::GetMontageForTag(const FGameplayTag& Tag, const int32 I
 {
 	return MontageActionData->GetMontageForTag(Tag, Index);
 }
-
+UAnimMontage* ALTWeapon::GetRandomMontageForTag(const FGameplayTag& Tag) const
+{
+	return MontageActionData->GetRandomMontageForTag(Tag);
+}
 float ALTWeapon::GetStaminaCost(const FGameplayTag& InTag) const
 {
 	//맵에 해당 태그가 있으면

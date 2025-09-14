@@ -9,6 +9,8 @@
 
 class UStatBarWidget;
 class UMy_HPBarWidget;
+class ULTAttributeComponent;
+class ULTPlayerHUDWidget;
 /**
  * 
  */
@@ -28,6 +30,7 @@ public:
 
 public:
 	virtual void NativeConstruct() override;
+	void BindPlayerStats(ULTAttributeComponent* AttributeComp);
 
 protected:
 	void OnAttributeChanged(ELTAttributeType AttributeType, float InValue);

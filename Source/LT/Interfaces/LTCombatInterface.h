@@ -7,6 +7,8 @@
 #include "UObject/Interface.h"
 #include "LTCombatInterface.generated.h"
 
+struct FGameplayTag;
+
 // This class does not need to be modified.
 UINTERFACE(MinimalAPI)
 class ULTCombatInterface : public UInterface
@@ -25,4 +27,5 @@ class LT_API ILTCombatInterface
 public:
 	virtual void ActivateWeaponCollision(EWeaponCollisionType WeaponCollisionType) = 0;
 	virtual void DeactivateWeaponCollision(EWeaponCollisionType WeaponCollisionType) = 0;
+	virtual void PerformAttack(FGameplayTag& AttackTypeTag, FOnMontageEnded& MontageEndedDelegate) {}
 };

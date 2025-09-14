@@ -6,6 +6,8 @@
 #include "GameFramework/Character.h"
 #include "GameplayEffectTypes.h"
 #include "Interfaces/LTTargeting.h"
+#include "Interfaces/LTCombatInterface.h"
+#include "Components/LTCombatComponent.h"
 #include "LTEnemy.generated.h"
 
 class UWidgetComponent;
@@ -15,7 +17,7 @@ class ULTAttributeComponent;
 class ATargetPoint;
 
 UCLASS()
-class LT_API ALTEnemy : public ACharacter, public ILTTargeting
+class LT_API ALTEnemy : public ACharacter, public ILTTargeting, public ILTCombatInterface
 {
 	GENERATED_BODY()
 
@@ -28,9 +30,10 @@ protected:
 	UWidgetComponent* LockOnWidgetComponent;
 	UPROPERTY(VisibleAnywhere)
 	ULTAttributeComponent* AttributeComponent;
-
 	UPROPERTY(VisibleAnywhere)
 	ULTStateComponent* StateComponent;
+	UPROPERTY(VisibleAnywhere)
+	ULTCombatComponent* CombatComponent;
 
 	// Effect Section
 protected:
@@ -61,6 +64,10 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "AI | Patrol")
 	int32 PatrolIndex = 0;
 
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TSubclassOf<ALTWeapon> DefaultWeaponClass;
+
 public:
 	ALTEnemy();
 
@@ -85,6 +92,10 @@ protected:
 public:
 	virtual void OnTargeted(bool bTargeted) override;
 	virtual bool CanBeTargeted() override;
+
+	virtual void ActivateWeaponCollision(EWeaponCollisionType WeaponCollisionType) override;
+	virtual void DeactivateWeaponCollision(EWeaponCollisionType WeaponCollisionType) override;
+	virtual void PerformAttack(FGameplayTag& AttackTypeTag, FOnMontageEnded& MontageEndedDelegate) override;
 
 public:
 	FORCEINLINE ATargetPoint* GetPatrolPoint()

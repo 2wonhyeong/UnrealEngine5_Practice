@@ -15,6 +15,7 @@
 #include "LTGameplayTags.h"
 #include "Components/SphereComponent.h"
 #include "Components/WidgetComponent.h"
+#include "Equipments/LTWeapon.h"
 
 
 ALTEnemy::ALTEnemy()
@@ -41,14 +42,26 @@ ALTEnemy::ALTEnemy()
 
 	AttributeComponent = CreateDefaultSubobject<ULTAttributeComponent>(TEXT("Attribute"));
 	StateComponent = CreateDefaultSubobject<ULTStateComponent>("State");
+	CombatComponent = CreateDefaultSubobject<ULTCombatComponent>("Combat");
 
 	// OnDeath Delegate에 함수 바인딩.
-	AttributeComponent->OnDeath.AddUObject(this, &ThisClass::OnDeath);
+	AttributeComponent->OnDeath.AddUObject(this, &ALTEnemy::OnDeath);
 }
 
 void ALTEnemy::BeginPlay()
 {
 	Super::BeginPlay();
+
+	//무기 장착
+	if (DefaultWeaponClass)
+	{
+		FActorSpawnParameters Params;
+		Params.Owner = this;
+
+		ALTWeapon* Weapon = GetWorld()->SpawnActor<ALTWeapon>(DefaultWeaponClass, GetActorTransform(), Params);
+		CombatComponent->SetCombatEnabled(true);
+		Weapon->EquipItem();
+	}
 
 }
 
@@ -194,4 +207,38 @@ bool ALTEnemy::CanBeTargeted()
 	FGameplayTagContainer TagCheck;
 	TagCheck.AddTag(LTGamePlayTags::Character_State_Death);
 	return StateComponent->IsCurrentStateEqualToAny(TagCheck) == false;
+}
+
+void ALTEnemy::ActivateWeaponCollision(EWeaponCollisionType WeaponCollisionType)
+{
+	if (CombatComponent)
+		CombatComponent->GetMainWeapon()->ActivateCollision(WeaponCollisionType);
+}
+
+void ALTEnemy::DeactivateWeaponCollision(EWeaponCollisionType WeaponCollisionType)
+{
+	if (CombatComponent)
+		CombatComponent->GetMainWeapon()->DeactivateCollision(WeaponCollisionType);
+}
+
+void ALTEnemy::PerformAttack(FGameplayTag& AttackTypeTag, FOnMontageEnded& MontageEndedDelegate)
+{
+	check(StateComponent);
+	check(CombatComponent);
+
+	if (const ALTWeapon* Weapon = CombatComponent->GetMainWeapon())
+	{
+		StateComponent->SetState(LTGamePlayTags::Character_State_Attacking);
+		CombatComponent->SetLastAttackType(AttackTypeTag);
+
+		UAnimMontage* Montage = Weapon->GetRandomMontageForTag(AttackTypeTag);
+		if (Montage)
+		{
+			if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
+			{
+				AnimInstance->Montage_Play(Montage);
+				AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, Montage);
+			}
+		}
+	}
 }

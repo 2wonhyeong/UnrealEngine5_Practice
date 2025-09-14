@@ -53,6 +53,7 @@ public:
 	virtual void EquipItem() override;
 
 	UAnimMontage* GetMontageForTag(const FGameplayTag& Tag, const int32 Index = 0) const;
+	UAnimMontage* GetRandomMontageForTag(const FGameplayTag& Tag) const;
 
 	float GetStaminaCost(const FGameplayTag& InTag) const;
 	float GetAttackDamage() const;

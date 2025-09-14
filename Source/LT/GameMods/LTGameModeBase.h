@@ -14,4 +14,14 @@ class LT_API ALTGameModeBase : public AGameModeBase
 {
 	GENERATED_BODY()
 	
+public:
+    UFUNCTION(Exec)
+    void PlayerDied(APlayerController* PlayerController);
+
+protected:
+    UFUNCTION()
+    void RespawnPlayer(AController* Controller);
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Respawn")
+    float RespawnDelay = 3.0f;
 };
