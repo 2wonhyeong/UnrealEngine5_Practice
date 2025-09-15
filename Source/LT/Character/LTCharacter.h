@@ -103,6 +103,13 @@ protected:
 	bool bSprinting = false;
 
 protected:
+	UPROPERTY(EditAnywhere, Category = "Effect")
+	USoundCue* ImpactSound;
+
+	UPROPERTY(EditAnywhere, Category = "Effect")
+	UParticleSystem* ImpactParticle;
+
+protected:
 	//콤보가 진행중인지
 	bool bComboSequenceRunning = false;
 	//콤보가 입력 가능한지
@@ -137,7 +144,11 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
-
+	//파티클 and 소리
+	void ImpactEffect(const FVector& Location);
+	//애니메이션
+	void HitReaction(const AActor* Attacker);
+	virtual void OnDeath();
 
 public:
 	FORCEINLINE ULTStateComponent* GetStateComponent()const { return StateComponent; };
@@ -192,5 +203,4 @@ public:
 public:
 	virtual void ActivateWeaponCollision(EWeaponCollisionType WeaponCollisionType) override;
 	virtual void DeactivateWeaponCollision(EWeaponCollisionType WeaponCollisionType) override;
-	virtual void OnDeath();
 };

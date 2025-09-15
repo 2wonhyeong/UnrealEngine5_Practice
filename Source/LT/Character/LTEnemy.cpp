@@ -132,63 +132,12 @@ void ALTEnemy::ImpactEffect(const FVector& Location)
 
 void ALTEnemy::HitReaction(const AActor* Attacker)
 {
-	if (UAnimMontage* HitReactAnimMontage = GetHitReactAnimation(Attacker))
-	{
-		float DelaySeconds = PlayAnimMontage(HitReactAnimMontage);
-	}
-}
+	check(CombatComponent);
 
-UAnimMontage* ALTEnemy::GetHitReactAnimation(const AActor* Attacker) const
-{
-	// LookAt 회전값을 구합니다. (현재 Actor가 공격자를 바라보는 회전값)
-	const FRotator LookAtRotation = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), Attacker->GetActorLocation());
-	// 현재 Actor의 회전값과 LookAt 회전값의 차이를 구합니다.
-	const FRotator DeltaRotation = UKismetMathLibrary::NormalizedDeltaRotator(GetActorRotation(), LookAtRotation);
-	// Z축 기준의 회전값 차이만을 취합니다.
-	const float DeltaZ = DeltaRotation.Yaw;
-
-	EHitDirection HitDirection = EHitDirection::Front;
-
-	if (UKismetMathLibrary::InRange_FloatFloat(DeltaZ, -45.f, 45.f))
+	if (UAnimMontage* HitReactAnimMontage = CombatComponent->GetMainWeapon()->GetHitReactMontage(Attacker))
 	{
-		HitDirection = EHitDirection::Front;
-		UE_LOG(LogTemp, Log, TEXT("Front"));
+		PlayAnimMontage(HitReactAnimMontage);
 	}
-	else if (UKismetMathLibrary::InRange_FloatFloat(DeltaZ, 45.f, 135.f))
-	{
-		HitDirection = EHitDirection::Left;
-		UE_LOG(LogTemp, Log, TEXT("Left"));
-	}
-	else if (UKismetMathLibrary::InRange_FloatFloat(DeltaZ, 135.f, 180.f)
-		|| UKismetMathLibrary::InRange_FloatFloat(DeltaZ, -180.f, -135.f))
-	{
-		HitDirection = EHitDirection::Back;
-		UE_LOG(LogTemp, Log, TEXT("Back"));
-	}
-	else if (UKismetMathLibrary::InRange_FloatFloat(DeltaZ, -135.f, -45.f))
-	{
-		HitDirection = EHitDirection::Right;
-		UE_LOG(LogTemp, Log, TEXT("Right"));
-	}
-
-	UAnimMontage* SelectedMontage = nullptr;
-	switch (HitDirection)
-	{
-	case EHitDirection::Front:
-		SelectedMontage = HitReactAnimFront;
-		break;
-	case EHitDirection::Back:
-		SelectedMontage = HitReactAnimBack;
-		break;
-	case EHitDirection::Left:
-		SelectedMontage = HitReactAnimLeft;
-		break;
-	case EHitDirection::Right:
-		SelectedMontage = HitReactAnimRight;
-		break;
-	}
-
-	return SelectedMontage;
 }
 
 void ALTEnemy::OnTargeted(bool bTargeted)
@@ -242,3 +191,56 @@ void ALTEnemy::PerformAttack(FGameplayTag& AttackTypeTag, FOnMontageEnded& Monta
 		}
 	}
 }
+
+/*UAnimMontage* ALTEnemy::GetHitReactAnimation(const AActor* Attacker) const
+{
+	// LookAt 회전값을 구합니다. (현재 Actor가 공격자를 바라보는 회전값)
+	const FRotator LookAtRotation = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), Attacker->GetActorLocation());
+	// 현재 Actor의 회전값과 LookAt 회전값의 차이를 구합니다.
+	const FRotator DeltaRotation = UKismetMathLibrary::NormalizedDeltaRotator(GetActorRotation(), LookAtRotation);
+	// Z축 기준의 회전값 차이만을 취합니다.
+	const float DeltaZ = DeltaRotation.Yaw;
+
+	EHitDirection HitDirection = EHitDirection::Front;
+
+	if (UKismetMathLibrary::InRange_FloatFloat(DeltaZ, -45.f, 45.f))
+	{
+		HitDirection = EHitDirection::Front;
+		UE_LOG(LogTemp, Log, TEXT("Front"));
+	}
+	else if (UKismetMathLibrary::InRange_FloatFloat(DeltaZ, 45.f, 135.f))
+	{
+		HitDirection = EHitDirection::Left;
+		UE_LOG(LogTemp, Log, TEXT("Left"));
+	}
+	else if (UKismetMathLibrary::InRange_FloatFloat(DeltaZ, 135.f, 180.f)
+		|| UKismetMathLibrary::InRange_FloatFloat(DeltaZ, -180.f, -135.f))
+	{
+		HitDirection = EHitDirection::Back;
+		UE_LOG(LogTemp, Log, TEXT("Back"));
+	}
+	else if (UKismetMathLibrary::InRange_FloatFloat(DeltaZ, -135.f, -45.f))
+	{
+		HitDirection = EHitDirection::Right;
+		UE_LOG(LogTemp, Log, TEXT("Right"));
+	}
+
+	UAnimMontage* SelectedMontage = nullptr;
+	switch (HitDirection)
+	{
+	case EHitDirection::Front:
+		SelectedMontage = HitReactAnimFront;
+		break;
+	case EHitDirection::Back:
+		SelectedMontage = HitReactAnimBack;
+		break;
+	case EHitDirection::Left:
+		SelectedMontage = HitReactAnimLeft;
+		break;
+	case EHitDirection::Right:
+		SelectedMontage = HitReactAnimRight;
+		break;
+	}
+
+	return SelectedMontage;
+}*/

@@ -54,6 +54,7 @@ public:
 
 	UAnimMontage* GetMontageForTag(const FGameplayTag& Tag, const int32 Index = 0) const;
 	UAnimMontage* GetRandomMontageForTag(const FGameplayTag& Tag) const;
+	UAnimMontage* GetHitReactMontage(const AActor* Attacker) const;
 
 	float GetStaminaCost(const FGameplayTag& InTag) const;
 	float GetAttackDamage() const;

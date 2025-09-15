@@ -21,6 +21,9 @@
 #include "Components/CapsuleComponent.h"
 #include "GameMods/LTGameModeBase.h"
 #include "Player/LTPlayerController.h"
+#include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetMathLibrary.h"
+#include "Sound/SoundCue.h"
 
 // Sets default values
 ALTCharacter::ALTCharacter()
@@ -142,6 +145,22 @@ float ALTCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 	{
 		// AttributeComponent의 ApplyHealthChange 함수를 호출하여 체력을 감소시킵니다. (음수 값 전달)
 		AttributeComponent->ApplyHealthChange(-ActualDamage);
+	}
+	StateComponent->SetState(LTGamePlayTags::Character_State_Hit);
+	StateComponent->ToggleMovementInput(false);
+	if (DamageEvent.IsOfType(FPointDamageEvent::ClassID))
+	{
+		const FPointDamageEvent* PointDamageEvent = static_cast<const FPointDamageEvent*>(&DamageEvent);
+		//데미지방향
+		FVector ShotDirectiron = PointDamageEvent->ShotDirection;
+		//공격받은 위치
+		FVector ImpactPoint = PointDamageEvent->HitInfo.ImpactPoint;
+		//공격받은 방향
+		FVector ImpactDirectiron = PointDamageEvent->HitInfo.ImpactNormal;
+		//히트한 객체의 위치
+		FVector HitLocation = PointDamageEvent->HitInfo.Location;
+		ImpactEffect(ImpactPoint);
+		HitReaction(EventInstigator->GetPawn());
 	}
 	return ActualDamage;
 }
@@ -419,6 +438,7 @@ bool ALTCharacter::CanPerformAttack(const FGameplayTag& AttackTypeTag) const
 	FGameplayTagContainer CheckTags;
 	CheckTags.AddTag(LTGamePlayTags::Character_State_Rolling);
 	CheckTags.AddTag(LTGamePlayTags::Character_State_GeneralAction);
+	CheckTags.AddTag(LTGamePlayTags::Character_State_Hit);
 
 	const float StaminaCost = CombatComponent->GetMainWeapon()->GetStaminaCost(AttackTypeTag);
 
@@ -576,6 +596,7 @@ void ALTCharacter::OnDeath()
 	if (USkeletalMeshComponent* MeshComp = GetMesh())
 	{
 		MeshComp->SetCollisionProfileName("Ragdoll");
+		MeshComp->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
 		MeshComp->SetSimulatePhysics(true);
 	}
 	if (ALTGameModeBase* GM = GetWorld()->GetAuthGameMode<ALTGameModeBase>())
@@ -588,5 +609,27 @@ void ALTCharacter::OnDeath()
 		{
 			LTController->ShowDeathWidget(DeathWidgetClass);
 		}
+	}
+}
+void ALTCharacter::ImpactEffect(const FVector& Location)
+{
+	if (ImpactSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), ImpactSound, Location);
+	}
+
+	if (ImpactParticle)
+	{
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactParticle, Location);
+	}
+}
+
+void ALTCharacter::HitReaction(const AActor* Attacker)
+{
+	check(CombatComponent);
+
+	if (UAnimMontage* HitReactAnimMontage = CombatComponent->GetMainWeapon()->GetHitReactMontage(Attacker))
+	{
+		PlayAnimMontage(HitReactAnimMontage);
 	}
 }

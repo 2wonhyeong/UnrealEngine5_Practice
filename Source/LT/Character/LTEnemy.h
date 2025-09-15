@@ -44,7 +44,7 @@ protected:
 	UParticleSystem* ImpactParticle;
 
 	// Montage Section
-protected:
+/*protected:
 	UPROPERTY(EditAnywhere, Category = "Montage | HitReact")
 	UAnimMontage* HitReactAnimFront;
 
@@ -55,7 +55,7 @@ protected:
 	UAnimMontage* HitReactAnimLeft;
 
 	UPROPERTY(EditAnywhere, Category = "Montage | HitReact")
-	UAnimMontage* HitReactAnimRight;
+	UAnimMontage* HitReactAnimRight;*/
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "AI | Patrol")
@@ -87,7 +87,7 @@ protected:
 	//애니메이션
 	void HitReaction(const AActor* Attacker);
 	//애니메이션 방향
-	UAnimMontage* GetHitReactAnimation(const AActor* Attacker) const;
+	//UAnimMontage* GetHitReactAnimation(const AActor* Attacker) const;
 
 public:
 	virtual void OnTargeted(bool bTargeted) override;

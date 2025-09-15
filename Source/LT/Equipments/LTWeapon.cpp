@@ -10,6 +10,7 @@
 #include "Animation/LTAnimInstance.h"
 #include "Data/LTMontageActionData.h"
 #include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetMathLibrary.h"
 
 ALTWeapon::ALTWeapon()
 {
@@ -61,6 +62,58 @@ UAnimMontage* ALTWeapon::GetMontageForTag(const FGameplayTag& Tag, const int32 I
 UAnimMontage* ALTWeapon::GetRandomMontageForTag(const FGameplayTag& Tag) const
 {
 	return MontageActionData->GetRandomMontageForTag(Tag);
+}
+UAnimMontage* ALTWeapon::GetHitReactMontage(const AActor* Attacker) const
+{
+	// LookAt 회전값을 구합니다. (현재 Actor가 공격자를 바라보는 회전값)
+	const FRotator LookAtRotation = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), Attacker->GetActorLocation());
+	// 현재 Actor의 회전값과 LookAt 회전값의 차이를 구합니다.
+	const FRotator DeltaRotation = UKismetMathLibrary::NormalizedDeltaRotator(GetActorRotation(), LookAtRotation);
+	// Z축 기준의 회전값 차이만을 취합니다.
+	const float DeltaZ = DeltaRotation.Yaw;
+
+	EHitDirection HitDirection = EHitDirection::Front;
+
+	if (UKismetMathLibrary::InRange_FloatFloat(DeltaZ, -45.f, 45.f))
+	{
+		HitDirection = EHitDirection::Front;
+		UE_LOG(LogTemp, Log, TEXT("Front"));
+	}
+	else if (UKismetMathLibrary::InRange_FloatFloat(DeltaZ, 45.f, 135.f))
+	{
+		HitDirection = EHitDirection::Left;
+		UE_LOG(LogTemp, Log, TEXT("Left"));
+	}
+	else if (UKismetMathLibrary::InRange_FloatFloat(DeltaZ, 135.f, 180.f)
+		|| UKismetMathLibrary::InRange_FloatFloat(DeltaZ, -180.f, -135.f))
+	{
+		HitDirection = EHitDirection::Back;
+		UE_LOG(LogTemp, Log, TEXT("Back"));
+	}
+	else if (UKismetMathLibrary::InRange_FloatFloat(DeltaZ, -135.f, -45.f))
+	{
+		HitDirection = EHitDirection::Right;
+		UE_LOG(LogTemp, Log, TEXT("Right"));
+	}
+
+	UAnimMontage* SelectedMontage = nullptr;
+	switch (HitDirection)
+	{
+	case EHitDirection::Front:
+		SelectedMontage = GetMontageForTag(LTGamePlayTags::Character_Action_HitReaction, 0);
+		break;
+	case EHitDirection::Back:
+		SelectedMontage = GetMontageForTag(LTGamePlayTags::Character_Action_HitReaction, 1);
+		break;
+	case EHitDirection::Left:
+		SelectedMontage = GetMontageForTag(LTGamePlayTags::Character_Action_HitReaction, 2);
+		break;
+	case EHitDirection::Right:
+		SelectedMontage = GetMontageForTag(LTGamePlayTags::Character_Action_HitReaction, 3);
+		break;
+	}
+
+	return SelectedMontage;
 }
 float ALTWeapon::GetStaminaCost(const FGameplayTag& InTag) const
 {
