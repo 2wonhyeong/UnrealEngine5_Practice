@@ -25,15 +25,17 @@ protected:
 	/** 타겟팅 충돌 체크용 */
 	UPROPERTY(VisibleAnywhere)
 	USphereComponent* TargetingSphereComponent;
-	/** LockOn UI Widget */
-	UPROPERTY(VisibleAnywhere)
-	UWidgetComponent* LockOnWidgetComponent;
 	UPROPERTY(VisibleAnywhere)
 	ULTAttributeComponent* AttributeComponent;
 	UPROPERTY(VisibleAnywhere)
 	ULTStateComponent* StateComponent;
 	UPROPERTY(VisibleAnywhere)
 	ULTCombatComponent* CombatComponent;
+	/** LockOn UI Widget */
+	UPROPERTY(VisibleAnywhere)
+	UWidgetComponent* LockOnWidgetComponent;
+	UPROPERTY(VisibleAnywhere)
+	UWidgetComponent* HPBarWidgetComponent;
 
 	// Effect Section
 protected:
@@ -78,8 +80,10 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	virtual float TakeDamage(float Damage, const FDamageEvent& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
-public:
+protected:
 	virtual void OnDeath();
+	void OnAttributeChanged(ELTAttributeType AttributeType, float InValue);
+	void SetupHpBar();
 
 protected:
 	//파티클 and 소리
@@ -96,6 +100,8 @@ public:
 	virtual void ActivateWeaponCollision(EWeaponCollisionType WeaponCollisionType) override;
 	virtual void DeactivateWeaponCollision(EWeaponCollisionType WeaponCollisionType) override;
 	virtual void PerformAttack(FGameplayTag& AttackTypeTag, FOnMontageEnded& MontageEndedDelegate) override;
+
+	void ToggleHPBarVisibility(bool bVisibility);
 
 public:
 	FORCEINLINE ATargetPoint* GetPatrolPoint()

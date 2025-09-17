@@ -16,10 +16,18 @@
 #include "Components/SphereComponent.h"
 #include "Components/WidgetComponent.h"
 #include "Equipments/LTWeapon.h"
-
+#include "UI/My_HPBarWidget.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "Perception/AISense_Damage.h"
+#include "AIController.h"
+#include "BrainComponent.h"
 
 ALTEnemy::ALTEnemy()
 {
+	//?
+	PrimaryActorTick.bCanEverTick = true;
+	bUseControllerRotationYaw = false;
+	GetCharacterMovement()->bOrientRotationToMovement = true;
 	// Targeting 구체 생성및 Collision 설정.
 	TargetingSphereComponent = CreateDefaultSubobject<USphereComponent>(TEXT("TargetingSphere"));
 	TargetingSphereComponent->SetupAttachment(GetRootComponent());
@@ -35,7 +43,12 @@ ALTEnemy::ALTEnemy()
 	LockOnWidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
 	LockOnWidgetComponent->SetVisibility(false);
 
-	PrimaryActorTick.bCanEverTick = true;
+	HPBarWidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("HPBarWidgetComponent"));
+	HPBarWidgetComponent->SetupAttachment(GetRootComponent());
+	HPBarWidgetComponent->SetRelativeLocation(FVector(0.f, 0.f, 100.f));
+	HPBarWidgetComponent->SetDrawSize(FVector2D(100.f, 10.f));
+	HPBarWidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
+	HPBarWidgetComponent->SetVisibility(false);
 
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
 	GetMesh()->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
@@ -46,6 +59,7 @@ ALTEnemy::ALTEnemy()
 
 	// OnDeath Delegate에 함수 바인딩.
 	AttributeComponent->OnDeath.AddUObject(this, &ALTEnemy::OnDeath);
+	AttributeComponent->OnAttributeChanged.AddUObject(this, &ALTEnemy::OnAttributeChanged);
 }
 
 void ALTEnemy::BeginPlay()
@@ -62,7 +76,7 @@ void ALTEnemy::BeginPlay()
 		CombatComponent->SetCombatEnabled(true);
 		Weapon->EquipItem();
 	}
-
+	SetupHpBar();
 }
 
 void ALTEnemy::Tick(float DeltaTime)
@@ -92,6 +106,8 @@ float ALTEnemy::TakeDamage(float Damage, const FDamageEvent& DamageEvent, AContr
 		FVector ImpactDirection = PointDamageEvent->HitInfo.ImpactNormal;
 		// 히트한 객체의 Location (객체 중심 관점)
 		FVector HitLocation = PointDamageEvent->HitInfo.Location;
+		//데미지를 받았다고 알려주는 함수
+		UAISense_Damage::ReportDamageEvent(GetWorld(), this, EventInstigator->GetPawn(), ActualDamage, HitLocation, HitLocation);
 
 		ImpactEffect(ImpactPoint);
 
@@ -103,6 +119,8 @@ float ALTEnemy::TakeDamage(float Damage, const FDamageEvent& DamageEvent, AContr
 
 void ALTEnemy::OnDeath()
 {
+	if (AAIController* AIController = Cast<AAIController>(GetController()))
+		AIController->GetBrainComponent()->StopLogic(TEXT("Death"));
 	if (UCapsuleComponent* CapsuleComp = GetCapsuleComponent())
 	{
 		CapsuleComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -114,6 +132,7 @@ void ALTEnemy::OnDeath()
 		MeshComp->SetCollisionProfileName("Ragdoll");
 		MeshComp->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
 		MeshComp->SetSimulatePhysics(true);
+		ToggleHPBarVisibility(false);
 	}
 }
 
@@ -189,6 +208,31 @@ void ALTEnemy::PerformAttack(FGameplayTag& AttackTypeTag, FOnMontageEnded& Monta
 				AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, Montage);
 			}
 		}
+	}
+}
+void ALTEnemy::ToggleHPBarVisibility(bool bVisibility)
+{
+	if (HPBarWidgetComponent)
+		HPBarWidgetComponent->SetVisibility(bVisibility);
+}
+//StatBar말고 HPBar로 캐스트해도 되나? 내 코드에 있는 HPBar는 필요없는 파일인가?
+void ALTEnemy::OnAttributeChanged(ELTAttributeType AttributeType, float InValue)
+{
+	if (AttributeType == ELTAttributeType::Health)
+	{
+		if (HPBarWidgetComponent)
+		{
+			if (const UMy_HPBarWidget* HPBar = Cast<UMy_HPBarWidget>(HPBarWidgetComponent->GetWidget()))
+				HPBar->SetRatio(InValue);
+		}
+	}
+}
+
+void ALTEnemy::SetupHpBar()
+{
+	if (AttributeComponent)
+	{
+		AttributeComponent->BroadcastAttributeChanged(ELTAttributeType::Health);
 	}
 }
 

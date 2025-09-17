@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "AIController.h"
+#include "Character/LTEnemy.h"
 #include "LTEnemyAIController.generated.h"
 
 /**
@@ -23,6 +24,9 @@ protected:
 	UAIPerceptionComponent* AIPerceptionComponent;
 
 	FTimerHandle TimerHandle;
+
+	UPROPERTY()
+	ALTEnemy* ControlledEnemy;
 
 public:
 	ALTEnemyAIController();
