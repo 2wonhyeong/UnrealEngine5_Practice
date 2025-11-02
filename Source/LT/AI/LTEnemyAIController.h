@@ -31,6 +31,9 @@ protected:
 public:
 	ALTEnemyAIController();
 
+public:
+	void StopUpdateTarget();
+
 protected:
 	virtual void OnPossess(APawn* InPawn) override;
 	virtual void OnUnPossess() override;

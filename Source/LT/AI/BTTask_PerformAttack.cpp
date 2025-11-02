@@ -18,10 +18,19 @@ EBTNodeResult::Type UBTTask_PerformAttack::ExecuteTask(UBehaviorTreeComponent& O
 		MontageEndedDelegate.BindLambda([this, &OwnerComp, ControlledPawn](UAnimMontage* Montage, bool bInterrupted)
 			{
 				UE_LOG(LogTemp, Log, TEXT("Execute MontageEndedDelegate"));
-				if (IsValid(&OwnerComp) == false) { return; }
+				if (IsValid(&OwnerComp) == false) 
+				{ 
+					return; 
+				}
 				if (ULTStateComponent* StateComponent = ControlledPawn->GetComponentByClass<ULTStateComponent>())
 				{
-					StateComponent->ClearState();
+					FGameplayTagContainer CheckTags;
+					CheckTags.AddTag(LTGamePlayTags::Character_State_Parried);
+					CheckTags.AddTag(LTGamePlayTags::Character_State_Stunned);
+					if (StateComponent->IsCurrentStateEqualToAny(CheckTags) == false)
+					{
+						StateComponent->ClearState();
+					}
 				}
 				FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
 			});

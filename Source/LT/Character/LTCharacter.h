@@ -18,6 +18,7 @@ class ULTAttributeComponent;
 class ULTStateComponent;
 class ULTCombatComponent;
 class ULTTargetingComponent;
+class ULTPotionInventoryComponent;
 
 UCLASS()
 class LT_API ALTCharacter : public ACharacter, public ILTCombatInterface
@@ -46,27 +47,33 @@ private:
 	//구르기
 	UPROPERTY(EditAnywhere, Category = "Input")
 	UInputAction* RollingAction;
+	//무기줍기
 	UPROPERTY(EditAnywhere, Category = "Input")
 	UInputAction* InteractAction;
-	//공격 3 종류 처리
+	//공격
 	UPROPERTY(EditAnywhere, Category = "Input")
 	UInputAction* AttackAction;
-	//공격 나머지 1종류 처리
 	UPROPERTY(EditAnywhere, Category = "Input")
 	UInputAction* HeavyAttackAction;
+	//점프
 	UPROPERTY(EditAnywhere, Category = "Input")
 	UInputAction* JumpAction;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Input, meta = (AllowPrivateAccess = "True"))
-	UInputAction* TestDamageAction;
 	//전투 활성화 비활성화
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Input, meta = (AllowPrivateAccess = "True"))
 	UInputAction* ToggleCombatAction;
+	//락온
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Input, meta = (AllowPrivateAccess = "True"))
 	UInputAction* LockOnTargetAction;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Input, meta = (AllowPrivateAccess = "True"))
 	UInputAction* LeftTargetActiron;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Input, meta = (AllowPrivateAccess = "True"))
 	UInputAction* RightTargetAction;
+	//패링
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Input, meta = (AllowPrivateAccess = "True"))
+	UInputAction* ParryAction;
+	//포션마시기
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Input, meta = (AllowPrivateAccess = "True"))
+	UInputAction* ConsumeAction;
 private:
 	//캐릭터 스탯 관리
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
@@ -77,8 +84,12 @@ private:
 	//무기, 전투 관리
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	ULTCombatComponent* CombatComponent;
+	//타겟팅 관리
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	ULTTargetingComponent* TargetingComponent;
+	//포션 관리
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	ULTPotionInventoryComponent* PotionInventoryComponent;
 	
 protected:
 	UPROPERTY(EditAnywhere, Category = "UI")
@@ -109,6 +120,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Effect")
 	UParticleSystem* ImpactParticle;
 
+	UPROPERTY(EditAnywhere, Category = "Effect")
+	USoundCue* BlockingSound;
+
 protected:
 	//콤보가 진행중인지
 	bool bComboSequenceRunning = false;
@@ -120,9 +134,15 @@ protected:
 	bool bSavedComboInput = false;
 	//콤보 리셋
 	FTimerHandle ComboResetTimerHandle;
+
+protected:
+	bool bFacingEnemy = false;
+
 protected:
 	UPROPERTY(EditAnywhere, Category = "Montage")
 	UAnimMontage* RollingMontage;
+	UPROPERTY(EditAnywhere, Category = "Montage")
+	UAnimMontage* DrinkingMontage;
 
 public:
 	// Sets default values for this character's properties
@@ -152,6 +172,7 @@ public:
 
 public:
 	FORCEINLINE ULTStateComponent* GetStateComponent()const { return StateComponent; };
+	bool IsDeath() const;
 
 protected:
 	FORCEINLINE bool IsSprinting() const { return bSprinting; };
@@ -170,7 +191,6 @@ protected:
 	void Interact();
 	bool CanToggleCombat() const;
 	void ToggleCombat();
-	void ApplyDamage();
 	//무기를 등에 차고 있는 상태에서 바로 공격할 수 있게
 	void AutoToggleCombat();
 	void Attack();
@@ -182,6 +202,8 @@ protected:
 	void LockOnTarget();
 	void LeftTarget();
 	void RightTarget();
+	void Parrying();
+	void Consume();
 protected:
 	//현재 상태에서 가능한 일반공격
 	FGameplayTag GetAttackPerform() const;
@@ -194,6 +216,14 @@ protected:
 	void ExecuteComboAttack(const FGameplayTag& AttackTypeTag);
 	//콤보 초기화
 	void ResetCombo();
+	//패링이 가능한지
+	bool CanPerformParry() const;
+	//패링이 성공을 했는지
+	bool ParriedAttackSuccceed() const;
+	//포션을 마실 수 있는지
+	bool CanDrinkPotion() const;
+	//포션 마시기 중단
+	void InterruptWhileDrinkingPotion() const;
 
 public:
 	void EnableComboWindow();

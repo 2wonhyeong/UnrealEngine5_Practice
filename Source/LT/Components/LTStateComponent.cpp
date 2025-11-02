@@ -48,6 +48,8 @@ void ULTStateComponent::MovementInputEnableAction()
 }
 void ULTStateComponent::ClearState()
 {
+	if (CurrentState == LTGamePlayTags::Character_State_Death)
+		return;
 	CurrentState = FGameplayTag::EmptyTag;
 }
 bool ULTStateComponent::IsCurrentStateEqualToAny(const FGameplayTagContainer& TagsToCheck) const

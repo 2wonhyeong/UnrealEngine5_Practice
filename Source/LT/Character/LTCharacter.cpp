@@ -24,6 +24,8 @@
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Sound/SoundCue.h"
+#include "Components/LTPotionInventoryComponent.h"
+
 
 // Sets default values
 ALTCharacter::ALTCharacter()
@@ -54,12 +56,11 @@ ALTCharacter::ALTCharacter()
 
 	AttributeComponent = CreateDefaultSubobject<ULTAttributeComponent>(TEXT("Attribute"));
 	StateComponent = CreateDefaultSubobject<ULTStateComponent>(TEXT("State"));
-
 	CombatComponent = CreateDefaultSubobject<ULTCombatComponent>(TEXT("Combat"));
-
 	TargetingComponent = CreateDefaultSubobject<ULTTargetingComponent>(TEXT("Targeting"));
+	PotionInventoryComponent = CreateDefaultSubobject<ULTPotionInventoryComponent>(TEXT("PotionInventory"));
 
-	AttributeComponent->OnDeath.AddUObject(this, &ThisClass::OnDeath);
+	AttributeComponent->OnDeath.AddUObject(this, &ALTCharacter::OnDeath);
 }
 
 // Called when the game starts or when spawned
@@ -112,39 +113,64 @@ void ALTCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
+		//움직임
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ALTCharacter::Move);
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ALTCharacter::Look);
-
+		//달리기
 		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Triggered, this, &ALTCharacter::Sprinting);
 		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &ALTCharacter::StopSprint);
-
+		//구르기
 		EnhancedInputComponent->BindAction(RollingAction, ETriggerEvent::Triggered, this, &ALTCharacter::Rolling);
-
+		//점프
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &ALTCharacter::Jumping);
+		//무기줍기
 		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &ALTCharacter::Interact);
-
+		//무기꺼내고 집어넣기
 		EnhancedInputComponent->BindAction(ToggleCombatAction, ETriggerEvent::Started, this, &ALTCharacter::ToggleCombat);
-
-		EnhancedInputComponent->BindAction(TestDamageAction, ETriggerEvent::Started, this, &ALTCharacter::ApplyDamage);
-
 		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &ALTCharacter::AutoToggleCombat);
+		//공격
 		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Canceled, this, &ALTCharacter::Attack);
 		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Triggered, this, &ALTCharacter::SpecialAttack);
 		EnhancedInputComponent->BindAction(HeavyAttackAction, ETriggerEvent::Started, this, &ALTCharacter::HeavyAttack);
-
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &ALTCharacter::Jumping);
-
+		//락온
 		EnhancedInputComponent->BindAction(LockOnTargetAction, ETriggerEvent::Started, this, &ALTCharacter::LockOnTarget);
 		EnhancedInputComponent->BindAction(LeftTargetActiron, ETriggerEvent::Started, this, &ALTCharacter::LeftTarget);
 		EnhancedInputComponent->BindAction(RightTargetAction, ETriggerEvent::Started, this, &ALTCharacter::RightTarget);
+		//패링
+		EnhancedInputComponent->BindAction(ParryAction, ETriggerEvent::Started, this, &ALTCharacter::Parrying);
+		//포션 마시기
+		EnhancedInputComponent->BindAction(ConsumeAction, ETriggerEvent::Started, this, &ALTCharacter::Consume);
 	}
 }
 float ALTCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
+	check(AttributeComponent);
+	check(StateComponent);
+
+	InterruptWhileDrinkingPotion();
+
 	const float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+	bFacingEnemy = UKismetMathLibrary::InRange_FloatFloat(GetDotProductTo(EventInstigator->GetPawn()), -0.1f, 1.f);
+	if (ParriedAttackSuccceed())
+	{
+		if (ILTCombatInterface* CombatInterface = Cast<ILTCombatInterface>(EventInstigator->GetPawn()))
+		{
+			CombatInterface->Parried();
+
+			ALTWeapon* Mainweapon = CombatComponent->GetMainWeapon();
+			if (IsValid(Mainweapon))
+			{
+				FVector Location = Mainweapon->GetActorLocation();
+				UGameplayStatics::PlaySoundAtLocation(GetWorld(), BlockingSound, Location);
+			}
+		}
+		return ActualDamage;
+	}
+
 	if (ActualDamage > 0.f)
 	{
-		// AttributeComponent의 ApplyHealthChange 함수를 호출하여 체력을 감소시킵니다. (음수 값 전달)
-		AttributeComponent->ApplyHealthChange(-ActualDamage);
+		AttributeComponent->TakeDamageAmount(ActualDamage);
 	}
 	StateComponent->SetState(LTGamePlayTags::Character_State_Hit);
 	StateComponent->ToggleMovementInput(false);
@@ -383,10 +409,6 @@ void ALTCharacter::HeavyAttack()
 		ExecuteComboAttack(AttackTypeTag);
 	}
 }
-void ALTCharacter::ApplyDamage()
-{
-	TakeDamage(10.f, FDamageEvent(), GetController(), this);
-}
 FGameplayTag ALTCharacter::GetAttackPerform() const
 {
 	if (GetCharacterMovement()->IsFalling())
@@ -439,6 +461,8 @@ bool ALTCharacter::CanPerformAttack(const FGameplayTag& AttackTypeTag) const
 	CheckTags.AddTag(LTGamePlayTags::Character_State_Rolling);
 	CheckTags.AddTag(LTGamePlayTags::Character_State_GeneralAction);
 	CheckTags.AddTag(LTGamePlayTags::Character_State_Hit);
+	CheckTags.AddTag(LTGamePlayTags::Character_State_Parrying);
+	CheckTags.AddTag(LTGamePlayTags::Character_State_DrinkingPotion);
 
 	const float StaminaCost = CombatComponent->GetMainWeapon()->GetStaminaCost(AttackTypeTag);
 
@@ -477,6 +501,77 @@ void ALTCharacter::ResetCombo()
 	bCanComboInput = false;
 	bSavedComboInput = false;
 	ComboCounter = 0;
+}
+bool ALTCharacter::CanPerformParry() const
+{
+	check(StateComponent);
+	check(CombatComponent);
+	check(AttributeComponent);
+
+	ALTWeapon* MainWeapon = CombatComponent->GetMainWeapon();
+	if (!IsValid(MainWeapon))
+		return false;
+
+	FGameplayTagContainer CheckTags;
+	CheckTags.AddTag(LTGamePlayTags::Character_State_Attacking);
+	CheckTags.AddTag(LTGamePlayTags::Character_State_Rolling);
+	CheckTags.AddTag(LTGamePlayTags::Character_State_GeneralAction);
+	CheckTags.AddTag(LTGamePlayTags::Character_State_Hit);
+	CheckTags.AddTag(LTGamePlayTags::Character_State_Death);
+	CheckTags.AddTag(LTGamePlayTags::Character_State_Parrying);
+	CheckTags.AddTag(LTGamePlayTags::Character_State_DrinkingPotion);
+
+	return StateComponent->IsCurrentStateEqualToAny(CheckTags) == false &&
+		MainWeapon->GetCombatType() == ECombatType::SwordShield &&
+		AttributeComponent->CheckHasEnoughStamina(1.f);
+}
+bool ALTCharacter::ParriedAttackSuccceed() const
+{
+	check(StateComponent);
+
+	FGameplayTagContainer CheckTags;
+	CheckTags.AddTag(LTGamePlayTags::Character_State_Parrying);
+
+	return StateComponent->IsCurrentStateEqualToAny(CheckTags) && bFacingEnemy;
+}
+bool ALTCharacter::CanDrinkPotion() const
+{
+	check(PotionInventoryComponent);
+	check(StateComponent);
+
+	FGameplayTagContainer CheckTags;
+	CheckTags.AddTag(LTGamePlayTags::Character_State_Attacking);
+	CheckTags.AddTag(LTGamePlayTags::Character_State_Death);
+	CheckTags.AddTag(LTGamePlayTags::Character_State_GeneralAction);
+	CheckTags.AddTag(LTGamePlayTags::Character_State_Hit);
+	CheckTags.AddTag(LTGamePlayTags::Character_State_Parrying);
+	CheckTags.AddTag(LTGamePlayTags::Character_State_Rolling);
+
+	return PotionInventoryComponent->GetPotionQuantity() > 0 && StateComponent->IsCurrentStateEqualToAny(CheckTags) == false;
+}
+void ALTCharacter::InterruptWhileDrinkingPotion() const
+{
+	check(StateComponent);
+
+	FGameplayTagContainer CheckTags;
+	CheckTags.AddTag(LTGamePlayTags::Character_State_DrinkingPotion);
+
+	if (StateComponent->IsCurrentStateEqualToAny(CheckTags))
+	{
+		if (PotionInventoryComponent)
+			PotionInventoryComponent->DespawnPotion();
+	}
+}
+void ALTCharacter::Consume()
+{
+	if (!StateComponent)
+		return;
+
+	if (CanDrinkPotion())
+	{
+		StateComponent->SetState(LTGamePlayTags::Character_State_DrinkingPotion);
+		PlayAnimMontage(DrinkingMontage);
+	}
 }
 void ALTCharacter::EnableComboWindow()
 {
@@ -567,6 +662,28 @@ void ALTCharacter::RightTarget()
 {
 	TargetingComponent->SwitchingLockedOnActor(ESwitchingDirection::Right);
 }
+void ALTCharacter::Parrying()
+{
+	check(CombatComponent);
+	check(StateComponent);
+	check(AttributeComponent);
+
+	if (CanPerformParry())
+	{
+		if (const ALTWeapon* MainWeapon = CombatComponent->GetMainWeapon())
+		{
+			UAnimMontage* ParryingMontage = MainWeapon->GetMontageForTag(LTGamePlayTags::Character_State_Parrying);
+
+			StateComponent->ToggleMovementInput(false);
+			AttributeComponent->ToggleStaminaRegeneration(false);
+			AttributeComponent->DecreaseStamina(10.f);
+
+			PlayAnimMontage(ParryingMontage);
+
+			AttributeComponent->ToggleStaminaRegeneration(true, 1.5f);
+		}
+	}
+}
 void ALTCharacter::ActivateWeaponCollision(EWeaponCollisionType WeaponCollisionType)
 {
 	if (CombatComponent)
@@ -632,4 +749,13 @@ void ALTCharacter::HitReaction(const AActor* Attacker)
 	{
 		PlayAnimMontage(HitReactAnimMontage);
 	}
+}
+bool ALTCharacter::IsDeath() const
+{
+	check(StateComponent);
+
+	FGameplayTagContainer CheckTags;
+	CheckTags.AddTag(LTGamePlayTags::Character_State_Death);
+
+	return StateComponent->IsCurrentStateEqualToAny(CheckTags);
 }

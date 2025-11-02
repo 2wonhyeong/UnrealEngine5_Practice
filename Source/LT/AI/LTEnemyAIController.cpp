@@ -7,11 +7,18 @@
 #include "Character/LTCharacter.h"
 #include "GameFramework/Character.h"
 #include "Kismet/GameplayStatics.h"
+#include "Components/LTRotationComponent.h"
 #include "Perception/AIPerceptionComponent.h"
 
 ALTEnemyAIController::ALTEnemyAIController()
 {
 	AIPerceptionComponent = CreateDefaultSubobject<UAIPerceptionComponent>("AIPerception");
+}
+
+void ALTEnemyAIController::StopUpdateTarget()
+{
+    GetWorld()->GetTimerManager().ClearTimer(TimerHandle);
+    SetTarget(nullptr);
 }
 
 void ALTEnemyAIController::OnPossess(APawn* InPawn)
@@ -28,8 +35,8 @@ void ALTEnemyAIController::OnPossess(APawn* InPawn)
 
 void ALTEnemyAIController::OnUnPossess()
 {
+    StopUpdateTarget();
     ControlledEnemy = nullptr;
-    GetWorld()->GetTimerManager().ClearTimer(TimerHandle);
 	Super::OnUnPossess();
 }
 
@@ -42,8 +49,16 @@ void ALTEnemyAIController::UpdateTarget() const
 
     if (OutActors.Contains(PlayerCharacter))
     {
-        SetTarget(PlayerCharacter);
-        ControlledEnemy->ToggleHPBarVisibility(true);
+        if (!PlayerCharacter->IsDeath())
+        {
+            SetTarget(PlayerCharacter);
+            ControlledEnemy->ToggleHPBarVisibility(true);
+        }
+        else
+        {
+            SetTarget(nullptr);
+            ControlledEnemy->ToggleHPBarVisibility(false);
+        }
     }
     else
     {
@@ -56,5 +71,11 @@ void ALTEnemyAIController::SetTarget(AActor* NewTarget) const
     if (IsValid(Blackboard))
     {
         Blackboard->SetValueAsObject(FName("Target"), NewTarget);
+    }
+    if (IsValid(ControlledEnemy)) {
+        if (ULTRotationComponent* RotationComponent = ControlledEnemy->GetComponentByClass<ULTRotationComponent>())
+        {
+            RotationComponent->SetTargetActor(NewTarget);
+        }
     }
 }

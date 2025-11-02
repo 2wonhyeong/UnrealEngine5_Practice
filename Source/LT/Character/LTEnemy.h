@@ -8,6 +8,7 @@
 #include "Interfaces/LTTargeting.h"
 #include "Interfaces/LTCombatInterface.h"
 #include "Components/LTCombatComponent.h"
+#include "Components/LTRotationComponent.h"
 #include "LTEnemy.generated.h"
 
 class UWidgetComponent;
@@ -15,6 +16,7 @@ class USphereComponent;
 class ULTStateComponent;
 class ULTAttributeComponent;
 class ATargetPoint;
+class ULTRotationComponent;
 
 UCLASS()
 class LT_API ALTEnemy : public ACharacter, public ILTTargeting, public ILTCombatInterface
@@ -36,6 +38,8 @@ protected:
 	UWidgetComponent* LockOnWidgetComponent;
 	UPROPERTY(VisibleAnywhere)
 	UWidgetComponent* HPBarWidgetComponent;
+	UPROPERTY(VisibleAnywhere)
+	ULTRotationComponent* RotationComponent;
 
 	// Effect Section
 protected:
@@ -67,8 +71,16 @@ protected:
 	int32 PatrolIndex = 0;
 
 protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stun Duration")
+	float StunnedDelay = 0.1f;
+
+protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TSubclassOf<ALTWeapon> DefaultWeaponClass;
+
+protected:
+	FTimerHandle ParriedDelayTimerHandle;
+	FTimerHandle StunnedDelayTimerHandle;
 
 public:
 	ALTEnemy();
@@ -79,9 +91,11 @@ protected:
 public:
 	virtual void Tick(float DeltaTime) override;
 	virtual float TakeDamage(float Damage, const FDamageEvent& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 protected:
 	virtual void OnDeath();
+	void SetDeathState();
 	void OnAttributeChanged(ELTAttributeType AttributeType, float InValue);
 	void SetupHpBar();
 
@@ -100,6 +114,7 @@ public:
 	virtual void ActivateWeaponCollision(EWeaponCollisionType WeaponCollisionType) override;
 	virtual void DeactivateWeaponCollision(EWeaponCollisionType WeaponCollisionType) override;
 	virtual void PerformAttack(FGameplayTag& AttackTypeTag, FOnMontageEnded& MontageEndedDelegate) override;
+	virtual void Parried() override;
 
 	void ToggleHPBarVisibility(bool bVisibility);
 

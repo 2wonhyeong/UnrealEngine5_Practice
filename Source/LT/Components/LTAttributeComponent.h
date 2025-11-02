@@ -65,8 +65,7 @@ public:
 	void BroadcastAttributeChanged(ELTAttributeType InAttributeType) const;
 
 	void TakeDamageAmount(float DamageAmount);
-
-	void ApplyHealthChange(float Delta);
+	void HealPlayer(float HealAmount);
 private:
 	//스태미너 재충전
 	UFUNCTION()

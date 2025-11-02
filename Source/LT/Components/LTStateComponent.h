@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
 #include "Components/ActorComponent.h"
+#include "LTGamePlayTags.h"
 #include "LTStateComponent.generated.h"
 
 
@@ -41,7 +42,12 @@ protected:
 	void MovementInputEnableAction();
 
 public:
-	FORCEINLINE void SetState(const FGameplayTag NewState) { CurrentState = NewState; };
+	FORCEINLINE void SetState(const FGameplayTag NewState)
+	{
+		if (CurrentState == LTGamePlayTags::Character_State_Death)
+			return;
+		CurrentState = NewState;
+	};
 	FORCEINLINE FGameplayTag GetCurrentState() const { return CurrentState; };
 
 	void ClearState();

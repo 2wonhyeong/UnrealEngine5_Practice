@@ -21,6 +21,8 @@
 #include "Perception/AISense_Damage.h"
 #include "AIController.h"
 #include "BrainComponent.h"
+#include "AI/LTEnemyAIController.h"
+#include "Kismet/KismetMathLibrary.h"
 
 ALTEnemy::ALTEnemy()
 {
@@ -56,6 +58,7 @@ ALTEnemy::ALTEnemy()
 	AttributeComponent = CreateDefaultSubobject<ULTAttributeComponent>(TEXT("Attribute"));
 	StateComponent = CreateDefaultSubobject<ULTStateComponent>("State");
 	CombatComponent = CreateDefaultSubobject<ULTCombatComponent>("Combat");
+	RotationComponent = CreateDefaultSubobject<ULTRotationComponent>("Rotation");
 
 	// OnDeath Delegate에 함수 바인딩.
 	AttributeComponent->OnDeath.AddUObject(this, &ALTEnemy::OnDeath);
@@ -117,6 +120,13 @@ float ALTEnemy::TakeDamage(float Damage, const FDamageEvent& DamageEvent, AContr
 	return ActualDamage;
 }
 
+void ALTEnemy::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	GetWorld()->GetTimerManager().ClearTimer(ParriedDelayTimerHandle);
+	GetWorld()->GetTimerManager().ClearTimer(StunnedDelayTimerHandle);
+	Super::EndPlay(EndPlayReason);
+}
+
 void ALTEnemy::OnDeath()
 {
 	if (AAIController* AIController = Cast<AAIController>(GetController()))
@@ -134,6 +144,20 @@ void ALTEnemy::OnDeath()
 		MeshComp->SetSimulatePhysics(true);
 		ToggleHPBarVisibility(false);
 	}
+	SetDeathState();
+}
+
+void ALTEnemy::SetDeathState()
+{
+	if (StateComponent)
+	{
+		StateComponent->SetState(LTGamePlayTags::Character_State_Death);
+	}
+	if (ALTEnemyAIController* AIController = Cast<ALTEnemyAIController>(GetController()))
+	{
+		AIController->StopUpdateTarget();
+	}
+	ToggleHPBarVisibility(false);
 }
 
 void ALTEnemy::ImpactEffect(const FVector& Location)
@@ -153,9 +177,23 @@ void ALTEnemy::HitReaction(const AActor* Attacker)
 {
 	check(CombatComponent);
 
+	StateComponent->SetState(LTGamePlayTags::Character_State_Stunned);
+
 	if (UAnimMontage* HitReactAnimMontage = CombatComponent->GetMainWeapon()->GetHitReactMontage(Attacker))
 	{
-		PlayAnimMontage(HitReactAnimMontage);
+		const float DelaySeconds = PlayAnimMontage(HitReactAnimMontage) + StunnedDelay;
+
+		FTimerDelegate TimerDelegate;
+		TimerDelegate.BindLambda([this]
+			{
+				FGameplayTagContainer CheckTags;
+				CheckTags.AddTag(LTGamePlayTags::Character_State_Stunned);
+				if (StateComponent->IsCurrentStateEqualToAny(CheckTags))
+				{
+					StateComponent->ClearState();
+				}
+			});
+		GetWorld()->GetTimerManager().SetTimer(StunnedDelayTimerHandle, TimerDelegate, DelaySeconds, false);
 	}
 }
 
@@ -193,6 +231,12 @@ void ALTEnemy::PerformAttack(FGameplayTag& AttackTypeTag, FOnMontageEnded& Monta
 {
 	check(StateComponent);
 	check(CombatComponent);
+	check(AttributeComponent);
+
+	FGameplayTagContainer CheckTags;
+	CheckTags.AddTag(LTGamePlayTags::Character_State_Stunned);
+	if (StateComponent->IsCurrentStateEqualToAny(CheckTags))
+		return;
 
 	if (const ALTWeapon* Weapon = CombatComponent->GetMainWeapon())
 	{
@@ -208,6 +252,32 @@ void ALTEnemy::PerformAttack(FGameplayTag& AttackTypeTag, FOnMontageEnded& Monta
 				AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, Montage);
 			}
 		}
+	}
+}
+void ALTEnemy::Parried()
+{
+	check(StateComponent);
+	check(CombatComponent);
+
+	StopAnimMontage();
+	StateComponent->SetState(LTGamePlayTags::Character_State_Parried);
+
+	if (const ALTWeapon* MainWeapon = CombatComponent->GetMainWeapon())
+	{
+		UAnimMontage* ParriedAnimMontage = MainWeapon->GetMontageForTag(LTGamePlayTags::Character_Action_ParriedHit);
+		const float Delay = PlayAnimMontage(ParriedAnimMontage) + 1.f;
+
+		FTimerDelegate TimerDelegate;
+		TimerDelegate.BindLambda([this]
+			{
+				FGameplayTagContainer CheckTags;
+				CheckTags.AddTag(LTGamePlayTags::Character_State_Death);
+				if (StateComponent->IsCurrentStateEqualToAny(CheckTags) == false)
+				{
+					StateComponent->ClearState();
+				}
+			});
+		GetWorld()->GetTimerManager().SetTimer(ParriedDelayTimerHandle, TimerDelegate, Delay, false);
 	}
 }
 void ALTEnemy::ToggleHPBarVisibility(bool bVisibility)

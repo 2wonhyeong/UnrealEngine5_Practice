@@ -69,6 +69,10 @@ void ULTAttributeComponent::BroadcastAttributeChanged(ELTAttributeType InAttribu
 }
 void ULTAttributeComponent::TakeDamageAmount(float DamageAmount)
 {
+	if (BaseHealth <= 0.f)
+	{
+		return;
+	}
 	BaseHealth = FMath::Clamp(BaseHealth - DamageAmount, 0.f, MaxHealth);
 	BroadcastAttributeChanged(ELTAttributeType::Health);
 
@@ -84,25 +88,10 @@ void ULTAttributeComponent::TakeDamageAmount(float DamageAmount)
 		}
 	}
 }
-void ULTAttributeComponent::ApplyHealthChange(float Delta)
+void ULTAttributeComponent::HealPlayer(float HealAmount)
 {
-	if (BaseHealth <= 0.f)
-	{
-		return;
-	}
-	BaseHealth = FMath::Clamp(BaseHealth + Delta, 0.f, MaxHealth);
+	BaseHealth = FMath::Clamp(BaseHealth + HealAmount, 0.f, MaxHealth);
 	BroadcastAttributeChanged(ELTAttributeType::Health);
-	if (BaseHealth <= 0.f)
-	{
-		if (OnDeath.IsBound())
-		{
-			OnDeath.Broadcast();
-		}
-		if (ULTStateComponent* StateComp = GetOwner()->FindComponentByClass<ULTStateComponent>())
-		{
-			StateComp->SetState(LTGamePlayTags::Character_State_Death);
-		}
-	}
 }
 void ULTAttributeComponent::RegenStaminaHandler()
 {

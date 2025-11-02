@@ -41,3 +41,13 @@ enum class EWeaponCollisionType : uint8
 	MainCollision,
 	SecondCollision,
 };
+
+UENUM(BlueprintType)
+enum class ELTAIBehavior : uint8
+{
+	Idle,
+	Patrol,
+	MeleeAttack,
+	Approach,
+	Stunned
+};
