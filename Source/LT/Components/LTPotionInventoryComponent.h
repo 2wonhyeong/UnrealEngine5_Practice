@@ -8,10 +8,15 @@
 
 class ALTPotion;
 
+DECLARE_MULTICAST_DELEGATE_OneParam(FDelegateOnUpdatePotionAmount, int32);
+
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class LT_API ULTPotionInventoryComponent : public UActorComponent
 {
 	GENERATED_BODY()
+
+public:
+	FDelegateOnUpdatePotionAmount OnUpdatePotionAmount;
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -34,5 +39,6 @@ public:
 	void DespawnPotion();
 	void SetPotionQuantity(int32 InQuantity);
 	FORCEINLINE int GetPotionQuantity() const { return PotionQuantity; }
-		
+
+	void BroadcastPotionUpdate() const;
 };

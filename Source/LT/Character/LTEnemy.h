@@ -73,6 +73,8 @@ protected:
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stun Duration")
 	float StunnedDelay = 0.1f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "sundeal")
+	float HoldDuration = 1.5f;
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -81,6 +83,10 @@ protected:
 protected:
 	FTimerHandle ParriedDelayTimerHandle;
 	FTimerHandle StunnedDelayTimerHandle;
+	FTimerHandle HoldAttackTimerHandle;
+	FTimerHandle SpecialAttackCooldownTimerHandle;
+	UPROPERTY()
+	UAnimMontage* CurrentAttackMontage;
 
 public:
 	ALTEnemy();
@@ -115,8 +121,15 @@ public:
 	virtual void DeactivateWeaponCollision(EWeaponCollisionType WeaponCollisionType) override;
 	virtual void PerformAttack(FGameplayTag& AttackTypeTag, FOnMontageEnded& MontageEndedDelegate) override;
 	virtual void Parried() override;
+	void PauseForCharge();
 
 	void ToggleHPBarVisibility(bool bVisibility);
+
+protected:
+	//선딜 대기 시간이 끝났을 때 실행
+	void ReleasedAttack();
+	UFUNCTION()
+	void OnSpecialAttackCooldownFinished();
 
 public:
 	FORCEINLINE ATargetPoint* GetPatrolPoint()

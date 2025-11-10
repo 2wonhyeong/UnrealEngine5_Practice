@@ -22,7 +22,8 @@
 #include "AIController.h"
 #include "BrainComponent.h"
 #include "AI/LTEnemyAIController.h"
-#include "Kismet/KismetMathLibrary.h"
+#include "Animation/AnimInstance.h"
+#include "BehaviorTree/BlackboardComponent.h"
 
 ALTEnemy::ALTEnemy()
 {
@@ -124,6 +125,8 @@ void ALTEnemy::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	GetWorld()->GetTimerManager().ClearTimer(ParriedDelayTimerHandle);
 	GetWorld()->GetTimerManager().ClearTimer(StunnedDelayTimerHandle);
+	GetWorld()->GetTimerManager().ClearTimer(HoldAttackTimerHandle);
+	GetWorld()->GetTimerManager().ClearTimer(SpecialAttackCooldownTimerHandle);
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -131,6 +134,8 @@ void ALTEnemy::OnDeath()
 {
 	if (AAIController* AIController = Cast<AAIController>(GetController()))
 		AIController->GetBrainComponent()->StopLogic(TEXT("Death"));
+	GetWorld()->GetTimerManager().ClearTimer(HoldAttackTimerHandle);
+	GetWorld()->GetTimerManager().ClearTimer(SpecialAttackCooldownTimerHandle);
 	if (UCapsuleComponent* CapsuleComp = GetCapsuleComponent())
 	{
 		CapsuleComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -176,6 +181,11 @@ void ALTEnemy::ImpactEffect(const FVector& Location)
 void ALTEnemy::HitReaction(const AActor* Attacker)
 {
 	check(CombatComponent);
+
+	if (GetWorld()->GetTimerManager().IsTimerActive(HoldAttackTimerHandle))
+	{
+		return;
+	}
 
 	StateComponent->SetState(LTGamePlayTags::Character_State_Stunned);
 
@@ -236,10 +246,17 @@ void ALTEnemy::PerformAttack(FGameplayTag& AttackTypeTag, FOnMontageEnded& Monta
 	FGameplayTagContainer CheckTags;
 	CheckTags.AddTag(LTGamePlayTags::Character_State_Stunned);
 	if (StateComponent->IsCurrentStateEqualToAny(CheckTags))
+	{
+		MontageEndedDelegate.ExecuteIfBound(nullptr, true);
 		return;
+	}
 
 	if (const ALTWeapon* Weapon = CombatComponent->GetMainWeapon())
 	{
+		if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
+		{
+			MoveComp->StopMovementImmediately();
+		}
 		StateComponent->SetState(LTGamePlayTags::Character_State_Attacking);
 		CombatComponent->SetLastAttackType(AttackTypeTag);
 
@@ -250,14 +267,61 @@ void ALTEnemy::PerformAttack(FGameplayTag& AttackTypeTag, FOnMontageEnded& Monta
 			{
 				AnimInstance->Montage_Play(Montage);
 				AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, Montage);
+				CurrentAttackMontage = Montage;
+				if (AttackTypeTag == LTGamePlayTags::Character_Attack_Special)
+				{
+					if (AAIController* AIController = Cast<AAIController>(GetController()))
+					{
+						if (UBlackboardComponent* BlackboardComp = AIController->GetBlackboardComponent())
+						{
+							// 1. 블랙보드에 "쿨타임 시작됨"을 알림
+							BlackboardComp->SetValueAsBool(FName("bIsSpecialAttackOnCooldown"), true);
+
+							// 2. 10초 뒤에 OnSpecialAttackCooldownFinished 함수를 호출하는 타이머 설정
+							const float CooldownDuration = 15.0f; // (쿨타임 10초)
+							GetWorld()->GetTimerManager().SetTimer(
+								SpecialAttackCooldownTimerHandle,
+								this,
+								&ALTEnemy::OnSpecialAttackCooldownFinished,
+								CooldownDuration,
+								false
+							);
+						}
+					}
+					AnimInstance->Montage_JumpToSection(FName("Start"), Montage);
+					/*GetWorld()->GetTimerManager().SetTimer(
+						HoldAttackTimerHandle,
+						this,
+						&ALTEnemy::ReleasedAttack,
+						HoldDuration,
+						false
+					);*/
+				}
+			}
+			else
+			{
+				MontageEndedDelegate.ExecuteIfBound(nullptr, true);
 			}
 		}
+		else
+		{
+			MontageEndedDelegate.ExecuteIfBound(nullptr, true);
+		}
+	}
+	else
+	{
+		MontageEndedDelegate.ExecuteIfBound(nullptr, true);
 	}
 }
 void ALTEnemy::Parried()
 {
 	check(StateComponent);
 	check(CombatComponent);
+
+	if (GetWorld()->GetTimerManager().IsTimerActive(HoldAttackTimerHandle))
+	{
+		return;
+	}
 
 	StopAnimMontage();
 	StateComponent->SetState(LTGamePlayTags::Character_State_Parried);
@@ -280,10 +344,46 @@ void ALTEnemy::Parried()
 		GetWorld()->GetTimerManager().SetTimer(ParriedDelayTimerHandle, TimerDelegate, Delay, false);
 	}
 }
+void ALTEnemy::PauseForCharge()
+{
+	if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
+	{
+		AnimInstance->Montage_Pause(CurrentAttackMontage);
+	}
+	GetWorld()->GetTimerManager().SetTimer(
+		HoldAttackTimerHandle,
+		this,
+		&ALTEnemy::ReleasedAttack,
+		HoldDuration,
+		false
+	);
+}
 void ALTEnemy::ToggleHPBarVisibility(bool bVisibility)
 {
 	if (HPBarWidgetComponent)
 		HPBarWidgetComponent->SetVisibility(bVisibility);
+}
+void ALTEnemy::ReleasedAttack()
+{
+	if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
+	{
+		if (StateComponent->GetCurrentState() == LTGamePlayTags::Character_State_Attacking &&
+			AnimInstance->Montage_GetCurrentSection(CurrentAttackMontage) == FName("Hold"))
+		{
+			AnimInstance->Montage_JumpToSection(FName("Release"), CurrentAttackMontage);
+			AnimInstance->Montage_Resume(CurrentAttackMontage);
+		}
+	}
+}
+void ALTEnemy::OnSpecialAttackCooldownFinished()
+{
+	if (AAIController* AIController = Cast<AAIController>(GetController()))
+	{
+		if (UBlackboardComponent* BlackboardComp = AIController->GetBlackboardComponent())
+		{
+			BlackboardComp->SetValueAsBool(FName("bIsSpecialAttackOnCooldown"), false);
+		}
+	}
 }
 //StatBar말고 HPBar로 캐스트해도 되나? 내 코드에 있는 HPBar는 필요없는 파일인가?
 void ALTEnemy::OnAttributeChanged(ELTAttributeType AttributeType, float InValue)

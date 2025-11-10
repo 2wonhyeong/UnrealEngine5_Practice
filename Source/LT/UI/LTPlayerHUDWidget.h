@@ -7,6 +7,7 @@
 #include "Blueprint/UserWidget.h"
 #include "LTPlayerHUDWidget.generated.h"
 
+class ULTPotionWidget;
 class UStatBarWidget;
 class UMy_HPBarWidget;
 class ULTAttributeComponent;
@@ -24,6 +25,8 @@ protected:
 	UStatBarWidget* StaminaBarWidget;
 	UPROPERTY(meta = (BindWidget), BlueprintReadWrite)
 	UMy_HPBarWidget* HPBarWidget;
+	UPROPERTY(meta = (BindWidget), BlueprintReadWrite)
+	ULTPotionWidget* PotionWidget;
 	
 public:
 	ULTPlayerHUDWidget(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
@@ -34,4 +37,6 @@ public:
 
 protected:
 	void OnAttributeChanged(ELTAttributeType AttributeType, float InValue);
+
+	void OnPotionQuantitiyChanged(int32 InAmount);
 };

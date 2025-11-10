@@ -21,6 +21,7 @@ void ULTPotionInventoryComponent::DrinkPotion()
 	{
 		PotionQuantity--;
 		Attribute->HealPlayer(PotionHealAmount);
+		BroadcastPotionUpdate();
 	}
 }
 
@@ -47,5 +48,14 @@ void ULTPotionInventoryComponent::DespawnPotion()
 void ULTPotionInventoryComponent::SetPotionQuantity(int32 InQuantity)
 {
 	PotionQuantity = InQuantity;
+	BroadcastPotionUpdate();
+}
+
+void ULTPotionInventoryComponent::BroadcastPotionUpdate() const
+{
+	if (OnUpdatePotionAmount.IsBound())
+	{
+		OnUpdatePotionAmount.Broadcast(PotionQuantity);
+	}
 }
 

@@ -3,8 +3,10 @@
 
 #include "UI/LTPlayerHUDWidget.h"
 #include "StatBarWidget.h"
+#include "LTPotionWidget.h"
 #include "UI/My_HPBarWidget.h"
 #include "Components/LTAttributeComponent.h"
+#include "Components/LTPotionInventoryComponent.h"
 
 ULTPlayerHUDWidget::ULTPlayerHUDWidget(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
@@ -19,6 +21,11 @@ void ULTPlayerHUDWidget::NativeConstruct()
 		if (ULTAttributeComponent* Attribute = OwningPawn->GetComponentByClass<ULTAttributeComponent>())
 		{
 			BindPlayerStats(Attribute);
+		}
+		if (ULTPotionInventoryComponent* PotionInventory = OwningPawn->GetComponentByClass<ULTPotionInventoryComponent>())
+		{
+			PotionInventory->OnUpdatePotionAmount.AddUObject(this, &ULTPlayerHUDWidget::OnPotionQuantitiyChanged);
+			PotionInventory->BroadcastPotionUpdate();
 		}
 	}
 }
@@ -43,5 +50,13 @@ void ULTPlayerHUDWidget::OnAttributeChanged(ELTAttributeType AttributeType, floa
 	case ELTAttributeType::Health:
 		HPBarWidget->SetRatio(InValue);
 		break;
+	}
+}
+
+void ULTPlayerHUDWidget::OnPotionQuantitiyChanged(int32 InAmount)
+{
+	if (PotionWidget)
+	{
+		PotionWidget->SetPotionQuantity(InAmount);
 	}
 }
